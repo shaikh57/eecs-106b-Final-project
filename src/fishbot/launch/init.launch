@@ -1,0 +1,4 @@
+<launch>
+    <node name="motion_planner" pkg="fishbot" type="motion_planner.py" output="screen" />
+    <node name="controller" pkg="fishbot" type="control.py" output="screen" />
+</launch>
