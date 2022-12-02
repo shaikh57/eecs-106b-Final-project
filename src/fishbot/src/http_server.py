@@ -1,11 +1,10 @@
 import http.server
-import os
 import socketserver
 
 class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == '/':
-            self.path = os.path.join("src", "fishbot", "src", "num")
+            self.path = "num"
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
 def main() -> None:

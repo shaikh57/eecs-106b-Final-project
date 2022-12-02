@@ -10,7 +10,7 @@ def motion_planner() -> None:
     Motion planning node.
     """
     pub = rospy.Publisher("motion_plan", String, queue_size=10)
-    r = rospy.Rate(1)
+    r = rospy.Rate(10)
 
     while not rospy.is_shutdown():
         s = rospy.get_time()
