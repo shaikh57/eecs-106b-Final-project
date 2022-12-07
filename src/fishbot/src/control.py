@@ -20,6 +20,27 @@ def controller() -> None:
     """
     rospy.Subscriber("motion_plan", String, callback)
 
+    ### take in linear (in cm) and angular error (in degrees)
+    linear_error = 0
+    angular_error = 0
+
+    command = ''
+
+    ### first case: STOP
+    if linear_error <= 2:     # tune
+        # publish STOP command
+        command = 'S'
+
+    ### second case: go STRAIGHT
+    elif angular_error <= 5:     # tune
+        # publish GO_STRAIGHT command
+        command = 'G'
+
+    ### third case: TURN
+    else:     # angular_error > 5
+        Kp = 1
+        # publish TURN command with gain proportional to angular error
+
     rospy.spin()
 
 
