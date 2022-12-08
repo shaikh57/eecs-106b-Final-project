@@ -1,5 +1,0 @@
-enum State {NEUTRAL,
-  F_UPPER, F_LOWER,
-  L_UPPER, L_LOWER,
-  R_UPPER, R_LOWER
-};

@@ -1,32 +1,19 @@
-#include <HTTPClient.h>
+#include <stdlib.h>
+#include <string.h>
 #include <ESP32Servo.h>
+#include <HTTPClient.h>
 #include <WiFi.h>
 
-#include "states.h"
 #include "wifi_credentials.h"
 
-// NETWORKING
-const char* ssid     = SSID;
-const char* password = PWORD;
-
-// SERVO PARAMS
 Servo tail_motor;
-const int trim      = 60;
+const int trim      = 95;
 const int servo_pin = 26;
+const int period    = 200;
 
-// TAIL PARAMS
-const int amplitude     = 30;
-const int offset        = 15;
-const int f_upper_angle = amplitude;
-const int f_lower_angle = -amplitude;
-const int l_upper_angle = amplitude - offset;
-const int l_lower_angle = -amplitude - offset;
-const int r_upper_angle = amplitude + offset;
-const int r_lower_angle = -amplitude + offset;
-
-// FSM INITS
-State current_state = NEUTRAL;
-String key          = "";
+const char *delim = "\n";
+const char *frwd = "FRWD";
+const char *turn = "TURN";
 
 void setup() {
   // put your setup code here, to run once:
@@ -37,7 +24,7 @@ void setup() {
   // Serial.print("\n\nConnecting to ");
   // Serial.println(ssid);
 
-  WiFi.begin(ssid, password);
+  WiFi.begin(SSID, PWORD);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -56,91 +43,6 @@ void setup() {
   tail_motor.attach(servo_pin, 500, 2400);
   tail_motor.write(trim);
   delay(1000);
-  tail_motor.detach();
-}
-
-State transition(State current_state, String action) {
-  State next_state = current_state;
-  switch (current_state) {
-    case NEUTRAL:
-      if (action == "w") {
-        next_state = F_UPPER;
-      } else if (action == "a") {
-        next_state = L_UPPER;
-      } else if (action == "d") {
-        next_state = R_UPPER;
-      }
-      break;
-    case F_UPPER:
-      if (action == "w") {
-        next_state = F_LOWER;
-      } else if (action == "a") {
-        next_state = L_UPPER;
-      } else if (action == "d") {
-        next_state = R_UPPER;
-      } else {
-        next_state = NEUTRAL;
-      }
-      break;
-    case F_LOWER:
-      if (action == "w") {
-        next_state = F_UPPER;
-      } else if (action == "a") {
-        next_state = L_LOWER;
-      } else if (action == "d") {
-        next_state = R_LOWER;
-      } else {
-        next_state = NEUTRAL;
-      }
-      break;
-    case L_UPPER:
-      if (action == "w") {
-        next_state = F_UPPER;
-      } else if (action == "a") {
-        next_state = L_LOWER;
-      } else if (action == "d") {
-        next_state = R_UPPER;
-      } else {
-        next_state = NEUTRAL;
-      }
-      break;
-    case L_LOWER:
-      if (action == "w") {
-        next_state = F_LOWER;
-      } else if (action == "a") {
-        next_state = L_UPPER;
-      } else if (action == "d") {
-        next_state = R_LOWER;
-      } else {
-        next_state = NEUTRAL;
-      }
-      break;
-    case R_UPPER:
-      if (action == "w") {
-        next_state = F_UPPER;
-      } else if (action == "a") {
-        next_state = L_UPPER;
-      } else if (action == "d") {
-        next_state = R_LOWER;
-      } else {
-        next_state = NEUTRAL;
-      }
-      break;
-    case R_LOWER:
-      if (action == "w") {
-        next_state = F_LOWER;
-      } else if (action == "a") {
-        next_state = L_LOWER;
-      } else if (action == "d") {
-        next_state = R_UPPER;
-      } else {
-        next_state = NEUTRAL;
-      }
-      break;
-    default:
-      break;
-  }
-  return next_state;
 }
 
 String http_GET_request(const char* server) {
@@ -155,7 +57,7 @@ String http_GET_request(const char* server) {
   
   if (response_code > 0) {
     // Serial.print("HTTP Response code: ");
-    // Serial.println(res        next_state = R_UPPER;ponse_code);
+    // Serial.println(response_code);
     payload = http.getString();
   } else {
     // Serial.print("Error code: ");
@@ -166,42 +68,40 @@ String http_GET_request(const char* server) {
   return payload;
 }
 
+void move_tail(int a, int b, unsigned long moving_time) {
+  unsigned long moveStartTime = millis(); // time when start moving
+  unsigned long progress = 0;
+
+  while (progress <= moving_time) {
+    progress = millis() - moveStartTime;
+    long angle = map(progress, 0, moving_time, a, b);
+    // Serial.println(angle);
+    tail_motor.write(angle);
+  }
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
+  String key;
   if (WiFi.status() == WL_CONNECTED) {
     key = http_GET_request(URL);
   }
-  State next_state = transition(current_state, key);
 
-  current_state = next_state;
-  int motor_angle = trim;
-  switch (current_state) {
-    case NEUTRAL:
-      motor_angle += 0;
-      break;
-    case F_UPPER:
-      motor_angle += f_upper_angle;
-      break;
-    case F_LOWER:
-      motor_angle += f_lower_angle;
-      break;
-    case L_UPPER:
-      motor_angle += l_upper_angle;
-      break;
-    case L_LOWER:
-      motor_angle += l_lower_angle;
-      break;
-    case R_UPPER:
-      motor_angle += r_upper_angle;
-      break;
-    case R_LOWER:
-      motor_angle += r_lower_angle;
-      break;
-    default:
-      break;
+  int str_len = key.length()+1;
+  char commands[str_len];
+  key.toCharArray(commands, str_len);
+  
+  char *cmd = strtok(commands, delim);
+  char *param = strtok(NULL, delim);
+  
+  int angle = atoi(param);
+  if (strcmp(cmd, frwd) == 0) {
+    move_tail(trim, trim + 30, 200);
+    move_tail(trim + 30, trim - 30, 400);
+    move_tail(trim - 30, trim, 200);
+  } else if (strcmp(cmd, turn) == 0) {
+    tail_motor.write(trim + angle);
+    delay(500);
+    move_tail(trim + angle, trim, 500);
   }
-  tail_motor.attach(servo_pin, 500, 2400);
-  tail_motor.write(motor_angle);
-  delay(200);
-  tail_motor.detach();
 }
