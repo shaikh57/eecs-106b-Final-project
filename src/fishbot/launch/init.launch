@@ -1,4 +1,51 @@
 <launch>
+    <arg name="video_device" default="/dev/video0" />
+    <arg name="image_width" default="640" />
+    <arg name="image_height" default="480" />
+
+    <arg name="markerId1" default="582"/>
+    <arg name="markerId2" default="100"/>
+    <arg name="markerSize1" default="0.05"/> <!-- in meter -->
+    <arg name="markerSize2" default="0.08"/> <!-- in meter -->
+    <arg name="eye" default="left"/>
+    <arg name="marker_frame1" default="fish_frame"/>
+    <arg name="marker_frame2" default="target_frame"/>
+    <arg name="ref_frame" default=""/> <!-- leave empty and the pose will be published wrt param parent_name -->
+    <arg name="corner_refinement" default="LINES" /> <!-- NONE, HARRIS, LINES, SUBPIX -->
+
+	<node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+		<param name="video_device" value="$(arg video_device)" />
+		<param name="image_width" value="$(arg image_width)" />
+		<param name="image_height" value="$(arg image_height)"/>
+		<param name="pixel_format" value="mjpeg" />
+		<param name="camera_frame_id" value="usb_cam" />
+		<param name="io_method" value="mmap"/>
+	</node>
+
+	<node pkg="aruco_ros" type="single" name="aruco_fish">
+        <remap from="/camera_info" to="/usb_cam/camera_info" />
+        <remap from="/image" to="/usb_cam/image_raw" />
+        <param name="image_is_rectified" value="True"/>
+        <param name="marker_size" value="$(arg markerSize1)"/>
+        <param name="marker_id" value="$(arg markerId1)"/>
+        <param name="reference_frame" value="$(arg ref_frame)"/> <!-- frame in which the marker pose will be refered -->
+        <param name="camera_frame" value="base_link1"/>
+        <param name="marker_frame" value="$(arg marker_frame1)" />
+        <param name="corner_refinement" value="$(arg corner_refinement)" />
+    </node>
+
+    <node pkg="aruco_ros" type="single" name="aruco_target">
+        <remap from="/camera_info" to="/usb_cam/camera_info" />
+        <remap from="/image" to="/usb_cam/image_raw" />
+        <param name="image_is_rectified" value="True"/>
+        <param name="marker_size" value="$(arg markerSize2)"/>
+        <param name="marker_id" value="$(arg markerId2)"/>
+        <param name="reference_frame" value="$(arg ref_frame)"/> <!-- frame in which the marker pose will be refered -->
+        <param name="camera_frame" value="base_link2"/>
+        <param name="marker_frame" value="$(arg marker_frame2)" />
+        <param name="corner_refinement" value="$(arg corner_refinement)" />
+    </node>
+    
     <node name="motion_planner" pkg="fishbot" type="motion_planner.py" output="screen" />
     <node name="controller" pkg="fishbot" type="control.py" output="screen" />
 </launch>

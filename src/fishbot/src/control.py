@@ -3,29 +3,18 @@
 import os
 
 import rospy
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import String
+from fishbot.msg import FishError
 
 
-def callback(msg: String) -> None:
+def callback(msg: FishError) -> None:
     folder = os.path.dirname(__file__)
     with open(os.path.join(folder, "num"), 'w', encoding="utf-8") as f:
-        f.write(str(msg.data))
-    print(f"{rospy.get_name()} received {msg.data}")
-
-
-def controller() -> None:
-    """
-    Motion planning node.
-    """
-    rospy.Subscriber("motion_plan", String, callback)
-
-    ### take in linear (in cm) and angular error (in degrees)
-    linear_error = 0
-    angular_error = 0
+        f.write(f"{msg.distance_error}\n{msg.angular_error}")
+    
+    linear_error = msg.distance_error
+    angular_error = msg.angular_error
 
     command = ''
-
     ### first case: STOP
     if linear_error <= 2:     # tune
         # publish STOP command
@@ -41,6 +30,12 @@ def controller() -> None:
         Kp = 1
         # publish TURN command with gain proportional to angular error
 
+
+def controller() -> None:
+    """
+    Motion planning node.
+    """
+    rospy.Subscriber("/motion_plan", FishError, callback)
     rospy.spin()
 
 
