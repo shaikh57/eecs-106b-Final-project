@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import curses
+import itertools
 import math
 from dataclasses import dataclass, field
+from typing import Iterable
 
 import rospy
 from fishbot.msg import FishError
@@ -13,17 +15,26 @@ import tf.transformations as tft
 
 @dataclass
 class TagTracker:
-    fish_tag:       Pose  = field(default_factory=Pose)
-    target_tag:     Pose  = field(default_factory=Pose)
-    distance_error: float = 0
-    angular_error:  float = 0
+    fish_tag:       Pose     = field(default_factory=Pose)
+    target_tag:     Pose     = field(default_factory=Pose)
+    distance_error: float    = float("inf")
+    angular_error:  float    = float("inf")
+    control_pts:    Iterable = itertools.cycle([
+        PoseStamped(position=Pose(x=0, y=0)),
+        PoseStamped(position=Pose(x=0.5, y=0)),
+        PoseStamped(position=Pose(x=0.5, y=0.5)),
+    ])
+
+    def __post_init__(self):
+        self.target_tag = next(self.control_pts)
 
     def fish_tag_callback(self, fish_tag: PoseStamped) -> None:
         self.fish_tag = fish_tag.pose
         self.joint_callback()
 
-    def target_tag_callback(self, target_tag: PoseStamped) -> None:
-        self.target_tag = target_tag.pose
+    def target_tag_callback(self) -> None:
+        if abs(self.distance_error) <= 0.05:
+            self.target_tag = next(self.control_pts)
         self.joint_callback()
 
     def joint_callback(self) -> None:
@@ -53,12 +64,13 @@ def motion_planner() -> None:
     Motion planning node.
     """
     tag_tracker = TagTracker()
-    rospy.Subscriber("/aruco_target/pose", PoseStamped, tag_tracker.target_tag_callback)
+    # rospy.Subscriber("/aruco_target/pose", PoseStamped, tag_tracker.target_tag_callback)
     rospy.Subscriber("/aruco_fish/pose", PoseStamped, tag_tracker.fish_tag_callback)
     pub = rospy.Publisher("/motion_plan", FishError, queue_size=10)
     r = rospy.Rate(10)
 
     while not rospy.is_shutdown():
+        tag_tracker.target_tag_callback()
         fish_error = FishError(tag_tracker.distance_error, tag_tracker.angular_error)
         pub.publish(fish_error)
         r.sleep()
