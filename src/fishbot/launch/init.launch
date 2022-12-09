@@ -5,7 +5,7 @@
 
     <arg name="markerId1" default="582"/>
     <arg name="markerId2" default="100"/>
-    <arg name="markerSize1" default="0.08"/> <!-- in meter -->
+    <arg name="markerSize1" default="0.06"/> <!-- in meter -->
     <arg name="markerSize2" default="0.08"/> <!-- in meter -->
     <arg name="eye" default="left"/>
     <arg name="marker_frame1" default="fish_frame"/>

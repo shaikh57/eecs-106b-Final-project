@@ -11,7 +11,11 @@ from fishbot.msg import FishError
 DISTANCE_THRESHOLD = 0.1
 ANGULAR_THRESHOLD  = 0.15
 MAX_SATURATION     = 50
-MIN_SATURATION     = 20
+MIN_SATURATION     = 25
+
+A = 76.5
+B = -0.0815
+C = 48.5
 
 class ESP32Command:
     pass
@@ -49,12 +53,16 @@ def callback(msg: FishError) -> None:
         # Turning left is a negative angle
         # Turning right is a positive angle
         # facing 180 degrees away is 3 radians
-        strength = -angular_err * 180 / math.pi
-        sign = math.copysign(1, strength)
-        if abs(strength) <= MIN_SATURATION:
-            strength = MIN_SATURATION
-        if abs(strength) >= MAX_SATURATION:
+        deg_ang_err = -angular_err * 180 / math.pi
+        sign = math.copysign(1, deg_ang_err)
+        if abs(deg_ang_err) >= A:
             strength = MAX_SATURATION
+        else:
+            strength = 1/B * math.log(A/abs(deg_ang_err) - 1) + C
+            if abs(strength) <= MIN_SATURATION:
+                strength = MIN_SATURATION
+            if abs(strength) >= MAX_SATURATION:
+                strength = MAX_SATURATION
         cmd = TurnCommand(int(sign * strength))
 
     with open(os.path.join(folder, "num"), 'w', encoding="utf-8") as f:

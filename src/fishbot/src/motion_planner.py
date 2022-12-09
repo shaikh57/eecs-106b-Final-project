@@ -5,13 +5,24 @@ import itertools
 import math
 from dataclasses import dataclass, field
 from typing import Iterable
+import time
 
 import rospy
 from fishbot.msg import FishError
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, Point
 from std_msgs.msg import String
 import tf.transformations as tft
 
+# Calibrated Corners of the Tank
+front_left = Pose(position=Point(x=0.31, y=-0.25))
+front_right = Pose(position=Point(x=-0.23, y=-0.24))
+back_left = Pose(position=Point(x=0.34, y=0.18))
+back_right = Pose(position=Point(x=-0.23, y=0.18))
+
+target1 = back_right
+target2 = Pose(position=Point(x=0.05, y=0.05))
+target3 = front_left
+target4 = back_left
 
 @dataclass
 class TagTracker:
@@ -20,9 +31,10 @@ class TagTracker:
     distance_error: float    = float("inf")
     angular_error:  float    = float("inf")
     control_pts:    Iterable = itertools.cycle([
-        PoseStamped(position=Pose(x=0, y=0)),
-        PoseStamped(position=Pose(x=0.5, y=0)),
-        PoseStamped(position=Pose(x=0.5, y=0.5)),
+        target1,
+        target2,
+        target3,
+        target4
     ])
 
     def __post_init__(self):
@@ -33,7 +45,7 @@ class TagTracker:
         self.joint_callback()
 
     def target_tag_callback(self) -> None:
-        if abs(self.distance_error) <= 0.05:
+        if abs(self.distance_error) <= 0.1:
             self.target_tag = next(self.control_pts)
         self.joint_callback()
 
@@ -99,6 +111,7 @@ def main() -> None:
     """
     Driver for motion planning node.
     """
+    time.sleep(5)
     rospy.init_node("motion_planner", anonymous=True)
 
     motion_planner()
