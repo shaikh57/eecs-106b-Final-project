@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
+"""
+Starter code for EECS C106B Spring 2020 Project 2.
+Author: Amay Saxena
+"""
 import sys
 import time
 # import rospy
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from collections import defaultdict
 from configuration_space import FishConfigurationSpace, Plan
 sys.setrecursionlimit(30000)
+import cv2
 
 
 class RRTGraph(object):
@@ -110,9 +116,8 @@ class RRTPlanner(object):
         ax.set_ylim(self.config_space.low_lims[1], self.config_space.high_lims[1])
 
         for obs in self.config_space.obstacles:
-            xc, yc, r = obs
-            circle = plt.Circle((xc, yc), r, color='black')
-            ax.add_artist(circle)
+            x, y, x_w, y_h = obs
+            ax.add_patch(Rectangle((x, y), x_w - x, y_h - y))
 
         for path in self.graph.get_edge_paths():
             xs = []
@@ -148,7 +153,7 @@ def main():
     start = np.array([1, 1, 0]) 
     goal = np.array([9, 9, 0.785])
     xy_low = [0, 0]
-    xy_high = [50, 50]
+    xy_high = [10, 10]
     phi_max = 0.785 # 360 degrees
 
     # u1 = Turning_angle
@@ -158,8 +163,36 @@ def main():
     
     # obstacles = [[6, 3.5, 0.5], [3.5, 6.5, 0.5]]
     # obstacles = []
-    obstacles = [[4,4,1.5]]
+    # obstacles = [[4,4,1.5]]
+    cap = cv2.VideoCapture(1)
+    count = 0
+    obstacles = []
+    while count < 1:
+        # Read a frame from the webcam
+        count += 1
+        ret, frame = cap.read()
+        resize_img = cv2.resize(frame  , (640 , 480))
+        # Convert the frame to grayscale
+        gray = cv2.cvtColor(resize_img, cv2.COLOR_BGR2GRAY)
 
+        # Detect edges in the grayscale frame using the Canny algorithm
+        edges = cv2.Canny(gray, 100, 200)
+
+        # Find contours in the edges image
+        contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Loop over all contours and filter for rectangular shapes
+        for contour in contours:
+            approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+            if len(approx) == 4:
+                x, y, w, h = cv2.boundingRect(approx)
+                aspect_ratio = float(w)/h
+                if aspect_ratio >= 0.8 and aspect_ratio <= 1.2 and (w) > 5 and (h) > 5:
+                    cv2.rectangle(resize_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                    obstacles.append([x*10/640,y*10/480,(x+w)*10/640,(y+h)*10/480])   
+    cv2.imshow('frame', resize_img)           
+    cap.release()
+    print(obstacles)
     config = FishConfigurationSpace( xy_low + [0],
                                         xy_high + [phi_max],
                                         [-u1_max, 0],

@@ -251,7 +251,11 @@ class FishConfigurationSpace(ConfigurationSpace):
         x = c[0]
         y = c[1]
         for obst in self.obstacles:
-            if (x - obst[0])**2 + (y - obst[1])**2 <= (obst[2]+self.robot_buffer)**2:
+            # simulation
+            # if (x - obst[0])**2 + (y - obst[1])**2 <= (obst[2]+self.robot_buffer)**2:
+            #     return True
+            # hardware
+            if x >= obst[0] and x <= obst[2] and y >= obst[1] and y <= obst[3]:
                 return True
         return False
 
