@@ -12,6 +12,7 @@ from fishbot.msg import FishError
 from geometry_msgs.msg import Pose, PoseStamped, Point
 from std_msgs.msg import String
 import tf.transformations as tft
+from rtt_hardware import *
 
 # Calibrated Corners of the Tank
 front_left = Pose(position=Point(x=0.31, y=-0.25))
@@ -49,6 +50,26 @@ class TagTracker:
             self.target_tag = next(self.control_pts)
         self.joint_callback()
 
+    def rrt_callback(self,fish_tag: PoseStamped, target_tag = PoseStamped):
+        fish_x = fish_tag.position.x
+        fish_y = fish_tag.position.y
+        fish_quaternion = [
+            self.fish_tag.orientation.x,
+            self.fish_tag.orientation.y,
+            self.fish_tag.orientation.z,
+            self.fish_tag.orientation.w
+        ]
+        _, _, fish_yaw = tft.euler_from_quaternion(fish_quaternion)
+
+        target_x = target_tag.position.x
+        target_y = target_tag.position.y
+        target_yaw = 0.785
+        start = np.array([fish_x, fish_y, fish_yaw])
+        goal = np.array([target_x, target_y, target_yaw])
+        plan = build_rrt_plan(start=start, goal=goal)
+        return plan
+
+
     def joint_callback(self) -> None:
         delta_x = self.fish_tag.position.x - self.target_tag.position.x
         delta_y = self.fish_tag.position.y - self.target_tag.position.y
@@ -83,6 +104,7 @@ def motion_planner() -> None:
 
     while not rospy.is_shutdown():
         tag_tracker.target_tag_callback()
+        
         fish_error = FishError(tag_tracker.distance_error, tag_tracker.angular_error)
         pub.publish(fish_error)
         r.sleep()

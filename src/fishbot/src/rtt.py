@@ -6,7 +6,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from configuration_space import FishConfigurationSpace, Plan
+from configuration_space_sim import FishConfigurationSpace, Plan
 sys.setrecursionlimit(30000)
 
 
@@ -84,6 +84,7 @@ class RRTPlanner(object):
                 continue
             delta_path = path.get_prefix(prefix_time_length)
             new_config = delta_path.end_position()
+            # print(new_config, "\n")
             self.graph.add_node(new_config, closest_config, delta_path)
             if self.config_space.distance(new_config, goal) <= self.expand_dist:
                 path_to_goal = self.config_space.local_plan(new_config, goal)
@@ -146,23 +147,23 @@ def main():
     # theta limited to +/- 0.785 rad (45 degrees)
 
     start = np.array([1, 1, 0]) 
-    goal = np.array([9, 9, 0.785])
+    goal = np.array([49, 49, 0.785])
     xy_low = [0, 0]
     xy_high = [50, 50]
-    phi_max = 0.785 # 360 degrees
+    phi_max = 6.28
 
     # u1 = Turning_angle
-    u1_max = 0.8 # 45 degrees
-    # u2 = frequency
-    u2_max = 1 # [rad/s]
+    u1_max = 0.872665 # 50 degrees
+    # u2 = amplitude [1,2]
+    u2_max = 1.05 # [rad]   1.05 radians = 60 degrees
     
-    # obstacles = [[6, 3.5, 0.5], [3.5, 6.5, 0.5]]
+    obstacles = [[20, 15, 4], [5, 20, 4]]
     # obstacles = []
-    obstacles = [[4,4,1.5]]
+    # obstacles = [[25,25,5]]
 
     config = FishConfigurationSpace( xy_low + [0],
                                         xy_high + [phi_max],
-                                        [-u1_max, 0],
+                                        [-u1_max, 0.17],
                                         [u1_max, u2_max],
                                         obstacles,
                                         0.15)

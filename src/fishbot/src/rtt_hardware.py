@@ -137,7 +137,7 @@ class RRTPlanner(object):
 
         plt.show()
 
-def main():
+def build_rrt_plan(self, start, goal):
     """Use this function if you'd like to test without ROS.
 
     If you're testing at home without ROS, you might want
@@ -150,10 +150,13 @@ def main():
     # input = [Turning_angle (theta), frequency (tail turn rate)]
     # theta limited to +/- 0.785 rad (45 degrees)
 
-    start = np.array([1, 1, 0]) 
-    goal = np.array([9, 9, 0.785])
+    # start = np.array([1, 1, 0]) 
+    # goal = np.array([9, 9, 0.785])
+    start = start
+    goal = plan
+    
     xy_low = [0, 0]
-    xy_high = [10, 10]
+    xy_high = [50, 50]
     phi_max = 0.785 # 360 degrees
 
     # u1 = Turning_angle
@@ -203,6 +206,4 @@ def main():
     planner = RRTPlanner(config, max_iter=10000, expand_dist=2)
     plan = planner.plan_to_pose(start, goal)
     planner.plot_execution()
-
-if __name__ == '__main__':
-    main()
+    return plan
